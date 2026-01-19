@@ -41,8 +41,19 @@ if (process.env.NODE_ENV === 'production') {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// CORS must come first to handle preflight requests
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    exposedHeaders: ['X-CSRF-Token']
+}));
+
 // Middleware
-app.use(helmet()); // Security headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+})); // Security headers
 app.use(mongoSanitize()); // Prevention against NoSQL injection
 app.use(cookieParser());
 
@@ -56,12 +67,6 @@ app.use((req, res, next) => {
     console.log(`[REQUEST] ${req.method} ${req.originalUrl}`);
     next();
 });
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
-}));
 app.use(express.json({ limit: '10kb' })); // Body parser with limit
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
