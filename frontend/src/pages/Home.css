@@ -1,0 +1,72 @@
+.section {
+    padding: 80px 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.section-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-main);
+}
+
+.section-header h2 .highlight {
+    color: var(--primary);
+}
+
+.section-header p {
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.pizza-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+}
+
+.bg-light {
+    background-color: #F2F2F2;
+}
+
+.cta-box {
+    background: var(--secondary);
+    border-radius: var(--radius-lg);
+    padding: 60px;
+    text-align: center;
+    color: var(--text-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-box h2 {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+}
+
+.cta-box p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 32px;
+    font-size: 1.1rem;
+}
+
+.cta-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.cta-box .btn-secondary {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.cta-box .btn-secondary:hover {
+    background: white;
+    color: var(--secondary);
+}

@@ -1,0 +1,138 @@
+.order-history-page {
+    padding-top: 120px;
+    padding-bottom: 80px;
+    min-height: 100vh;
+    background-color: var(--bg-body);
+}
+
+.order-history-page h1 {
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.page-loading {
+    display: flex;
+    justify-content: center;
+    padding-top: 150px;
+}
+
+.orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.order-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eee;
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.order-id .label {
+    color: #888;
+    margin-right: 8px;
+    font-size: 0.9rem;
+}
+
+.order-id .value {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+.order-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-orange {
+    background: #fff7e6;
+    color: #fa8c16;
+}
+
+.status-blue {
+    background: #e6f7ff;
+    color: #1890ff;
+}
+
+.status-green {
+    background: #f6ffed;
+    color: #52c41a;
+}
+
+.status-red {
+    background: #fff1f0;
+    color: #f5222d;
+}
+
+.status-gray {
+    background: #f5f5f5;
+    color: #888;
+}
+
+.order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.order-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.order-total {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.order-item-row {
+    display: flex;
+    gap: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+
+.order-item-row .qty {
+    font-weight: 600;
+    width: 30px;
+}
+
+.order-item-row .name {
+    color: #333;
+}
+
+.order-item-row .details {
+    color: #999;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px;
+    color: #aaa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}

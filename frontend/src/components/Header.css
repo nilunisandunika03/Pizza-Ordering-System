@@ -1,0 +1,223 @@
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--text-main);
+    transition: var(--transition);
+}
+
+.logo:hover {
+    transform: scale(1.02);
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.orders-btn,
+.profile-btn {
+    transition: transform 0.2s;
+    color: var(--text-main);
+}
+
+.orders-btn:hover,
+.profile-btn:hover {
+    transform: scale(1.1);
+    color: var(--primary);
+}
+
+.logo-icon {
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+}
+
+.logo-text .highlight {
+    color: var(--primary);
+}
+
+.nav-menu {
+    display: flex;
+    gap: 32px;
+}
+
+.nav-link {
+    font-weight: 600;
+    color: var(--text-muted);
+    position: relative;
+    font-size: 1rem;
+    padding: 4px 0;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+    border-radius: 99px;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: var(--primary);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    width: 100%;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cart-btn {
+    background: var(--bg-body);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    position: relative;
+    transition: var(--transition);
+}
+
+.cart-btn:hover {
+    background: var(--primary);
+    color: var(--text-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 87, 34, 0.2);
+}
+
+.cart-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--accent);
+    color: var(--secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .nav-menu {
+        display: none;
+    }
+}
+
+/* Profile, Cart, and Orders Button shared styles */
+.profile-btn,
+.orders-btn {
+    background: var(--bg-body);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    transition: var(--transition);
+}
+
+.profile-btn:hover {
+    background: var(--primary);
+    color: var(--text-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 87, 34, 0.2);
+}
+
+/* Auth Buttons */
+.auth-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.login-btn,
+.register-btn {
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: var(--transition);
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+
+.login-btn {
+    color: var(--text-main);
+    background: transparent;
+    border: 1px solid transparent;
+    /* Ensure border exists for layout stability */
+}
+
+.login-btn:hover {
+    color: var(--primary);
+    background: rgba(255, 87, 34, 0.05);
+    /* Subtle hover effect */
+}
+
+.register-btn {
+    background: var(--primary);
+    color: var(--text-light);
+    box-shadow: 0 4px 10px rgba(255, 87, 34, 0.3);
+}
+
+.register-btn:hover {
+    color: var(--primary);
+    background: rgba(255, 87, 34, 0.05);
+    /* Ensure text is visible on dark background */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 87, 34, 0.4);
+}
+
+@media (max-width: 768px) {
+    .auth-buttons {
+        display: none;
+        /* Hide on mobile for now or handle differently */
+    }
+}
