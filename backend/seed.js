@@ -20,16 +20,16 @@ const seedDatabase = async () => {
         console.log('✨ Database cleared.');
 
         // ====================  Admin User ====================
-        const adminExists = await User.findOne({ email: 'admin@pizzasystem.com' });
+        const adminExists = await User.findOne({ email: 'nilunisandunika03@gmail.com' });
         if (!adminExists) {
             await User.create({
-                email: 'admin@pizzasystem.com',
+                email: 'nilunisandunika03@gmail.com',
                 password_hash: 'Admin@123456',
                 full_name: 'System Administrator',
                 is_verified: true,
                 role: 'admin'
             });
-            console.log('✅ Admin user created: admin@pizzasystem.com / Admin@123456');
+            console.log('✅ Admin user created: nilunisandunika03@gmail.com / Admin@123456');
         } else {
             console.log('ℹ️  Admin user already exists');
         }

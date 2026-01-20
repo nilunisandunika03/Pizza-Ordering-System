@@ -17,6 +17,9 @@ import OrderDetails from './pages/OrderDetails';
 import AdminDashboard from './pages/AdminDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import AdminRoute from './components/AdminRoute';
+import UserRoute from './components/UserRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
@@ -34,21 +37,28 @@ function App() {
             <Header />
             <main>
               <Routes>
+                {/* Public routes */}
                 <Route path="/" element={<Home />} />
-                <Route path="/menu" element={<Menu />} />
-                <Route path="/cart" element={<Cart />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/verify-email" element={<EmailVerify />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/orders" element={<OrderHistory />} />
-                <Route path="/orders/:id" element={<OrderDetails />} />
-                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
+
+                {/* User-only routes (customers only, admins redirected to /admin) */}
+                <Route path="/menu" element={<UserRoute requireAuth={false}><Menu /></UserRoute>} />
+                <Route path="/cart" element={<UserRoute requireAuth={false}><Cart /></UserRoute>} />
+                <Route path="/checkout" element={<UserRoute requireAuth={true}><Checkout /></UserRoute>} />
+                <Route path="/orders" element={<UserRoute requireAuth={true}><OrderHistory /></UserRoute>} />
+                <Route path="/orders/:id" element={<UserRoute requireAuth={true}><OrderDetails /></UserRoute>} />
+                
+                {/* Profile - accessible by both users and admins */}
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+                {/* Admin-only routes (customers redirected to home) */}
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               </Routes>
             </main>
             <Footer />
