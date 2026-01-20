@@ -9,7 +9,8 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS,
     },
     tls: {
-        rejectUnauthorized: false
+        // Enable certificate verification in production
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
     }
 });
 
@@ -22,18 +23,25 @@ const sendEmail = async (to, subject, html) => {
             html,
         };
 
-        
-        console.log('--- EMAIL SENT (LOG) ---');
-        console.log(`To: ${to}`);
-        console.log(`Subject: ${subject}`);
-        console.log(`Content: ${html}`);
-        console.log('------------------------');
+        // Only log email details in development (without sensitive content)
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('--- EMAIL SENT (DEV LOG) ---');
+            console.log(`To: ${to}`);
+            console.log(`Subject: ${subject}`);
+            // Don't log HTML content as it contains OTPs and tokens
+            console.log('Content: [REDACTED - contains sensitive data]');
+            console.log('----------------------------');
+        }
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('Email sent: ' + info.response);
+        
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Email sent: ' + info.response);
+        }
+        
         return info;
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('Error sending email:', error.message); // Only log message, not full error
         
         if (process.env.NODE_ENV === 'production') {
             throw error;

@@ -91,10 +91,13 @@ api.interceptors.response.use(
         // Handle session expiration
         if (error.response?.status === 401) {
             console.warn('[Auth] Session expired or unauthorized');
-            // Clear local auth state if needed
+            // Clear all sensitive local storage data
             localStorage.removeItem('user');
+            sessionStorage.clear(); // Clear any session data
             // Redirect to login if not already there
-            if (!window.location.pathname.includes('/login')) {
+            if (!window.location.pathname.includes('/login') && 
+                !window.location.pathname.includes('/signup') &&
+                !window.location.pathname.includes('/verify-email')) {
                 window.location.href = '/login';
             }
         }

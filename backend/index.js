@@ -74,10 +74,14 @@ app.use(hstsHeader); // HSTS for HTTPS enforcement
 app.use(securityHeaders); // Additional security headers
 app.use(ipThrottling); // IP-based throttling for DDoS protection
 
-app.use((req, res, next) => {
-    console.log(`[REQUEST] ${req.method} ${req.originalUrl}`);
-    next();
-});
+// Request logging (development only)
+if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+        console.log(`[REQUEST] ${req.method} ${req.originalUrl}`);
+        next();
+    });
+}
+
 app.use(express.json({ limit: '10kb' })); // Body parser with limit
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 

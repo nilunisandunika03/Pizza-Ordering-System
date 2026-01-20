@@ -218,6 +218,13 @@ const securityHeaders = (req, res, next) => {
     // Permissions Policy
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     
+    // Prevent caching of sensitive API responses
+    if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/payment') || req.path.startsWith('/api/order')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+    
     next();
 };
 

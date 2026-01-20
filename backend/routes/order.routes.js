@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const Order = require('../database/models/Order');
 const User = require('../database/models/User');
 const { isAuthenticated } = require('../middleware/auth.middleware');
@@ -126,11 +127,11 @@ router.post('/', userOnly, async (req, res) => {
             } : undefined
         });
 
-        // Generate unique order number: ORD-YYYYMMDD-XXXX
+        // Generate unique order number: ORD-YYYYMMDD-XXXXXXXX (cryptographically random)
         const date = new Date();
         const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const random = Math.floor(1000 + Math.random() * 9000);
-        newOrder.order_number = `ORD-${dateStr}-${random}`;
+        const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
+        newOrder.order_number = `ORD-${dateStr}-${randomHex}`;
 
         // Set estimated delivery time
         newOrder.estimated_delivery_time = new Date(Date.now() + 45 * 60 * 1000);

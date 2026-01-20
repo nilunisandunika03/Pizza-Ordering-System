@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import api from '../api/axios';
+import api, { initializeCSRF } from '../api/axios';
 import './Auth.css';
 
 const EmailVerify = () => {
@@ -22,6 +22,9 @@ const EmailVerify = () => {
             }
 
             try {
+                // Initialize CSRF token first (in case user opened link in new tab)
+                await initializeCSRF();
+                
                 await api.post('/auth/verify-email', { token });
                 setStatus('success');
                 setMessage('Email verified successfully!');

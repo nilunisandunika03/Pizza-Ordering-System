@@ -191,19 +191,24 @@ router.post('/register', csrfProtection, authLimiter, [
 });
 
 
-router.post('/verify-email', csrfProtection, authLimiter, async (req, res) => {
+// Email verification - No CSRF required as token is already secure one-time use
+router.post('/verify-email', authLimiter, async (req, res) => {
     const { token } = req.body;
-    if (!token) return res.status(400).json({ message: 'Missing token' });
+    
+    if (!token) {
+        return res.status(400).json({ message: 'Missing token' });
+    }
 
     try {
         // When the user clicks the link, check the timestamp
-        const user = await User.findOne({ verification_token: token });
+        const user = await User.findOne({ verification_token: token.trim() });
 
         if (!user) {
             return res.status(400).json({ message: 'Invalid verification token' });
         }
 
         // Check if link is expired (10 minutes)
+        
         if (user.verification_token_expires < Date.now()) {
             // If Expired: Show "Link expired. [Resend Verification Email]."
             return res.status(400).json({ 
@@ -218,9 +223,12 @@ router.post('/verify-email', csrfProtection, authLimiter, async (req, res) => {
         user.verification_token = null;
         user.verification_token_expires = null;
         await user.save();
+        
+        logger.info('Email verified successfully', { email: user.email });
 
         res.status(200).json({ message: 'Email verified successfully. You can now login.' });
     } catch (error) {
+        logger.error('Email verification error', { error: error.message });
         res.status(500).json({ message: 'Server error during verification' });
     }
 });
@@ -429,8 +437,16 @@ router.get('/me', isAuthenticated, async (req, res) => {
 });
 
 
-router.put('/profile', isAuthenticated, [
-    body('fullName').optional().notEmpty().withMessage('Full name cannot be empty'),
+router.put('/profile', isAuthenticated, authLimiter, [
+    body('fullName').optional().notEmpty().withMessage('Full name cannot be empty')
+        .isLength({ max: 100 }).withMessage('Full name too long')
+        .trim()
+        .escape(),
+    body('address.no').optional().isLength({ max: 50 }).trim().escape(),
+    body('address.street').optional().isLength({ max: 200 }).trim().escape(),
+    body('address.city').optional().isLength({ max: 100 }).trim().escape(),
+    body('address.state').optional().isLength({ max: 100 }).trim().escape(),
+    body('address.zip_code').optional().isLength({ max: 20 }).trim().escape(),
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -461,6 +477,114 @@ router.put('/profile', isAuthenticated, [
     } catch (error) {
         console.error('Profile Update Error:', error);
         res.status(500).json({ message: 'Error updating profile' });
+    }
+});
+
+// ==================== PASSWORD RESET ====================
+
+// Request Password Reset
+router.post('/forgot-password', csrfProtection, authLimiter, [
+    body('email').isEmail().withMessage('Invalid email format')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase() });
+
+        // Always return success to prevent email enumeration
+        if (!user) {
+            return res.status(200).json({ 
+                message: 'If an account with that email exists, a password reset link has been sent.' 
+            });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenHash = await argon2.hash(resetToken, { type: argon2.argon2id });
+        
+        user.password_reset_token = resetTokenHash;
+        user.password_reset_expires = Date.now() + 60 * 60 * 1000; // 1 hour
+        await user.save();
+
+        // Send reset email
+        const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+        await sendEmail(email, 'Password Reset Request', `
+            <h3>Password Reset</h3>
+            <p>You requested a password reset for your PizzaSlice account.</p>
+            <p>Click the link below to reset your password (expires in 1 hour):</p>
+            <a href="${resetLink}">Reset Password</a>
+            <p>If you didn't request this, please ignore this email.</p>
+        `);
+
+        logger.info('Password reset requested', { email: email.toLowerCase() });
+
+        res.status(200).json({ 
+            message: 'If an account with that email exists, a password reset link has been sent.' 
+        });
+    } catch (error) {
+        logger.error('Password reset request error', { error: error.message, email });
+        res.status(500).json({ message: 'Server error during password reset request' });
+    }
+});
+
+// Reset Password with Token
+router.post('/reset-password', csrfProtection, authLimiter, [
+    body('email').isEmail().withMessage('Invalid email format'),
+    body('token').notEmpty().withMessage('Reset token is required'),
+    body('newPassword')
+        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/)
+        .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, token, newPassword } = req.body;
+
+    try {
+        const user = await User.findOne({ 
+            email: email.toLowerCase(),
+            password_reset_expires: { $gt: Date.now() }
+        });
+
+        if (!user || !user.password_reset_token) {
+            return res.status(400).json({ 
+                message: 'Invalid or expired reset token. Please request a new password reset.',
+                expired: true
+            });
+        }
+
+        // Verify token
+        const isValidToken = await argon2.verify(user.password_reset_token, token);
+        if (!isValidToken) {
+            return res.status(400).json({ 
+                message: 'Invalid reset token. Please request a new password reset.' 
+            });
+        }
+
+        // Update password and clear reset token
+        user.password_hash = newPassword; // Will be hashed by pre-save hook
+        user.password_reset_token = null;
+        user.password_reset_expires = null;
+        user.failed_login_attempts = 0; // Reset lockout
+        user.lock_until = null;
+        await user.save();
+
+        logger.info('Password reset successful', { email: email.toLowerCase() });
+
+        res.status(200).json({ 
+            message: 'Password reset successful. You can now login with your new password.' 
+        });
+    } catch (error) {
+        logger.error('Password reset error', { error: error.message, email });
+        res.status(500).json({ message: 'Server error during password reset' });
     }
 });
 

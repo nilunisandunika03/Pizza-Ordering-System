@@ -1,5 +1,6 @@
 import { Envelope, Phone, MapPin } from 'phosphor-react';
 import { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import api from '../api/axios';
 import './Contact.css';
 
@@ -91,7 +92,7 @@ const Contact = () => {
                         <div className="form-group">
                             <label>Captcha</label>
                             <div className="captcha-container">
-                                <div dangerouslySetInnerHTML={{ __html: captchaSvg }} className="captcha-img" />
+                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(captchaSvg) }} className="captcha-img" />
                                 <button type="button" onClick={fetchCaptcha} className="btn-icon">↻</button>
                             </div>
                             <input

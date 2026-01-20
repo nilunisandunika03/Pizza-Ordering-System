@@ -88,7 +88,16 @@ const userSchema = new mongoose.Schema({
         expiry: String,
         token: String, // In a real app, this is a PCIDSS token from Stripe/etc.
         cardHolder: String
-    }]
+    }],
+    // Password Reset Fields
+    password_reset_token: {
+        type: String,
+        default: null
+    },
+    password_reset_expires: {
+        type: Date,
+        default: null
+    }
 }, {
     timestamps: true
 });

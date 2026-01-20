@@ -31,8 +31,10 @@ const run = async () => {
             await user.save();
             console.log(`Success: User ${email} is now verified!`);
         } else if (action === 'otp') {
+            // Note: OTP is now hashed, we can only check if one exists
             if (user.mfa_secret) {
-                console.log(`Current OTP for ${email}: ${user.mfa_secret}`);
+                console.log(`An OTP exists for ${email} (hashed - cannot display)`);
+                console.log('To test login, check your email or verify the user directly.');
             } else {
                 console.log(`No active OTP found for ${email}. (Try logging in first)`);
             }
