@@ -29,6 +29,20 @@ router.post('/', userOnly, async (req, res) => {
         const userId = req.session.userId;
         const ip = req.ip || req.connection.remoteAddress;
 
+        // Check active orders limit (max 5 active orders per user)
+        const activeOrdersCount = await Order.countDocuments({
+            customer: userId,
+            status: { $nin: ['delivered', 'cancelled'] }
+        });
+
+        if (activeOrdersCount >= 5) {
+            return res.status(400).json({
+                message: 'You have reached the maximum limit of 5 active orders. Please wait for your existing orders to be delivered before placing new ones.',
+                orderLimitReached: true,
+                activeOrders: activeOrdersCount
+            });
+        }
+
         // 0. Validate product IDs (prevent BSON errors from stale cart)
         const mongoose = require('mongoose');
         for (const item of items) {
