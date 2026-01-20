@@ -23,7 +23,7 @@
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
         "mongoose": "^9.0.2",
-        "nodemailer": "^6.9.13",
+        "nodemailer": "^7.0.12",
         "otp-generator": "^4.0.1",
         "stripe": "^14.25.0",
         "svg-captcha": "^1.4.0",
