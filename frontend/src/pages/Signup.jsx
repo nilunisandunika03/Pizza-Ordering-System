@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import DOMPurify from 'dompurify';
 import './Auth.css';
 import api from '../api/axios';
 import zxcvbn from 'zxcvbn'; // We'll need to install this in frontend too
@@ -200,7 +201,7 @@ const Signup = () => {
                         <div className="form-group">
                             <label>Captcha</label>
                             <div className="captcha-container">
-                                <div dangerouslySetInnerHTML={{ __html: captchaSvg }} className="captcha-img" />
+                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(captchaSvg) }} className="captcha-img" />
                                 <button type="button" onClick={fetchCaptcha} className="btn-icon" title="Refresh Captcha">↻</button>
                             </div>
                             <input

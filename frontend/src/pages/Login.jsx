@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import DOMPurify from 'dompurify';
 import './Auth.css';
 import api from '../api/axios';
 
@@ -105,7 +106,7 @@ const Login = () => {
                         <div className="form-group">
                             <label>Captcha</label>
                             <div className="captcha-container">
-                                <div dangerouslySetInnerHTML={{ __html: captchaSvg }} className="captcha-img" />
+                                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(captchaSvg) }} className="captcha-img" />
                                 <button type="button" onClick={fetchCaptcha} className="btn-icon">↻</button>
                             </div>
                             <input
