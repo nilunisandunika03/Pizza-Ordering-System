@@ -130,9 +130,16 @@ const Profile = () => {
                                 <button onClick={() => setIsEditing(true)} className="btn btn-primary">
                                     Edit Profile
                                 </button>
-                                <Link to="/orders" className="btn btn-secondary">
-                                    <Clock size={20} /> View Order History
-                                </Link>
+                                {user.role !== 'admin' && (
+                                    <Link to="/orders" className="btn btn-secondary">
+                                        <Clock size={20} /> View Order History
+                                    </Link>
+                                )}
+                                {user.role === 'admin' && (
+                                    <Link to="/admin" className="btn btn-secondary">
+                                        Go to Admin Dashboard
+                                    </Link>
+                                )}
                                 <button onClick={logout} className="btn btn-logout">
                                     Logout
                                 </button>

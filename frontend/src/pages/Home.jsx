@@ -1,6 +1,8 @@
 import Hero from '../components/Hero';
 import PizzaCard from '../components/PizzaCard';
 import pizzaImage from '../assets/pizza-margherita.png';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const featuredPizzas = [
@@ -64,6 +66,15 @@ const featuredPizzas = [
 ];
 
 const Home = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    // If admin user, redirect to admin dashboard
+    if (user && user.role === 'admin') {
+        navigate('/admin');
+        return null;
+    }
+
     return (
         <div className="home-page">
             <Hero />
@@ -89,8 +100,8 @@ const Home = () => {
                         <h2>Ready for a Slice?</h2>
                         <p>Order online for fast delivery or curb-side pickup.</p>
                         <div className="cta-actions">
-                            <button className="btn btn-primary" onClick={() => window.location.href = "/menu"}>Order Now</button>
-                            <button className="btn btn-secondary" onClick={() => window.location.href = "/menu"}>Our Menu</button>
+                            <button className="btn btn-primary" onClick={() => navigate('/menu')}>Order Now</button>
+                            <button className="btn btn-secondary" onClick={() => navigate('/menu')}>Our Menu</button>
                         </div>
                     </div>
                 </div>

@@ -52,28 +52,30 @@ const Signup = () => {
 
         try {
             const res = await signup(name, email, password, captcha);
-            setSuccess(res.message);
-            // Clear form
-            setName('');
-            setEmail('');
-            setPassword('');
-            setCaptcha('');
+            // Only show success if registration was actually successful
+            if (res.message && !res.suggestLogin) {
+                setSuccess(res.message);
+                setError(''); // Ensure error is cleared
+                // Clear form
+                setName('');
+                setEmail('');
+                setPassword('');
+                setCaptcha('');
+            }
         } catch (err) {
             const errorData = err.response?.data;
             const errorMessage = errorData?.message || 'Failed to sign up';
+            
+            // Clear success message when there's an error
+            setSuccess('');
             
             // Check for password guidelines
             if (errorData?.passwordGuidelines) {
                 setPasswordGuidelines(errorData.passwordGuidelines);
             }
             
-            // Check if email already registered
-            if (errorData?.suggestLogin) {
-                // Show error with login link
-                setError(errorMessage);
-            } else {
-                setError(errorMessage);
-            }
+            // Set error message
+            setError(errorMessage);
             fetchCaptcha(); // Refresh captcha on failure
         }
     };
@@ -97,7 +99,7 @@ const Signup = () => {
                 <h2>Create Account</h2>
                 <p>Join us for exclusive deals</p>
 
-                {error && (
+                {error && !success && (
                     <div className="alert error">
                         {error}
                         {error.includes('already registered') && (
@@ -110,7 +112,7 @@ const Signup = () => {
                     </div>
                 )}
                 
-                {passwordGuidelines && (
+                {passwordGuidelines && !success && (
                     <div className="alert warning password-guidelines">
                         <h4 style={{ marginTop: 0, marginBottom: '10px' }}>
                             🔒 {passwordGuidelines.message}
@@ -126,7 +128,7 @@ const Signup = () => {
                     </div>
                 )}
                 
-                {success && <div className="alert success">{success}</div>}
+                {success && !error && <div className="alert success">{success}</div>}
 
                 {!success && (
                     <form onSubmit={handleSubmit}>

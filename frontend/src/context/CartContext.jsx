@@ -4,27 +4,71 @@ const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
+// Validate MongoDB ObjectId format (24 hex characters)
+const isValidObjectId = (id) => {
+    if (!id || typeof id !== 'string') return false;
+    return /^[a-f\d]{24}$/i.test(id);
+};
+
+// Check if cart item has valid product ID
+const isValidCartItem = (item) => {
+    const productId = item._id || item.id;
+    return productId && isValidObjectId(productId);
+};
+
 export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState(() => {
         const savedCart = localStorage.getItem('cartItems');
         if (savedCart) {
-            const parsed = JSON.parse(savedCart);
-        
-            const hasStaleData = parsed.some(item => typeof item.id === 'number' || !isNaN(item.id));
-            if (hasStaleData) {
+            try {
+                const parsed = JSON.parse(savedCart);
+                
+                // Detect and remove stale/invalid cart data
+                const hasStaleData = parsed.some(item => {
+                    const productId = item._id || item.id;
+                    // Check for numeric IDs, invalid ObjectId format, or missing IDs
+                    return !productId || 
+                           typeof productId === 'number' || 
+                           !isNaN(productId) ||
+                           !isValidObjectId(productId);
+                });
+                
+                if (hasStaleData) {
+                    console.warn('Stale cart data detected and cleared');
+                    localStorage.removeItem('cartItems');
+                    return [];
+                }
+                
+                return parsed;
+            } catch (error) {
+                console.error('Failed to parse cart data:', error);
                 localStorage.removeItem('cartItems');
                 return [];
             }
-            return parsed;
         }
         return [];
     });
 
     useEffect(() => {
-        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+        // Validate all items before saving to localStorage
+        const validItems = cartItems.filter(item => isValidCartItem(item));
+        
+        // If invalid items were filtered out, update state
+        if (validItems.length !== cartItems.length) {
+            console.warn('Invalid items removed from cart');
+            setCartItems(validItems);
+        }
+        
+        localStorage.setItem('cartItems', JSON.stringify(validItems));
     }, [cartItems]);
 
     const addToCart = (product) => {
+        // Validate product has valid ID before adding
+        if (!isValidCartItem(product)) {
+            console.error('Cannot add invalid product to cart:', product);
+            return;
+        }
+        
         setCartItems(prevItems => {
             const existingItem = prevItems.find(item =>
                 item.id === product.id &&
