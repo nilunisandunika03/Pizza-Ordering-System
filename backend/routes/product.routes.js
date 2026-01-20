@@ -3,7 +3,7 @@ const router = express.Router();
 const { body, validationResult, query } = require('express-validator');
 const Product = require('../database/models/Product');
 const Category = require('../database/models/Category');
-const { requireAdmin } = require('../middleware/admin.middleware');
+const { adminOnly } = require('../middleware/admin.middleware');
 const logger = require('../utils/logger');
 const rateLimit = require('express-rate-limit');
 const { apiRateLimiter } = require('../middleware/security.middleware');
@@ -128,7 +128,7 @@ router.get('/featured/list', apiRateLimiter, async (req, res) => {
 // ==================== ADMIN ROUTES ====================
 
 // Create new product
-router.post('/', requireAdmin, [
+router.post('/', adminOnly, [
     body('name').notEmpty().trim(),
     body('description').notEmpty().trim(),
     body('category').isMongoId(),
@@ -160,7 +160,7 @@ router.post('/', requireAdmin, [
 });
 
 // Update product
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', adminOnly, async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(
             req.params.id,
@@ -187,7 +187,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 });
 
 // Delete product
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', adminOnly, async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id);
 

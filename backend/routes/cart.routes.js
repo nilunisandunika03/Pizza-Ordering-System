@@ -5,6 +5,7 @@ const Cart = require('../database/models/Cart');
 const Product = require('../database/models/Product');
 const { calculateProductPrice } = require('../utils/priceCalculator');
 const logger = require('../utils/logger');
+const { userOnly } = require('../middleware/admin.middleware');
 
 
 const getOrCreateCart = async (req) => {
@@ -31,10 +32,10 @@ const getOrCreateCart = async (req) => {
     return cart;
 };
 
-// ==================== CART ROUTES ====================
+// ==================== CART ROUTES (USER ONLY) ====================
+// Admin users should not use cart functionality
 
-
-router.get('/', async (req, res) => {
+router.get('/', userOnly, async (req, res) => {
     try {
         const cart = await getOrCreateCart(req);
         await cart.populate('items.product');
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
 });
 
 // Add item to cart
-router.post('/items', [
+router.post('/items', userOnly, [
     body('productId').isMongoId(),
     body('quantity').isInt({ min: 1 }),
     body('customization').optional().isObject()
@@ -115,7 +116,7 @@ router.post('/items', [
 });
 
 // Update cart item
-router.put('/items/:itemId', [
+router.put('/items/:itemId', userOnly, [
     body('quantity').optional().isInt({ min: 1 }),
     body('customization').optional().isObject()
 ], async (req, res) => {
@@ -159,7 +160,7 @@ router.put('/items/:itemId', [
 });
 
 // Remove item from cart
-router.delete('/items/:itemId', async (req, res) => {
+router.delete('/items/:itemId', userOnly, async (req, res) => {
     try {
         const cart = await getOrCreateCart(req);
 
@@ -180,7 +181,7 @@ router.delete('/items/:itemId', async (req, res) => {
 });
 
 // Clear cart
-router.delete('/', async (req, res) => {
+router.delete('/', userOnly, async (req, res) => {
     try {
         const cart = await getOrCreateCart(req);
 

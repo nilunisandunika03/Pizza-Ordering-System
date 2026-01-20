@@ -8,10 +8,14 @@ const { sendEmail } = require('../utils/email');
 const { isAuthenticated } = require('../middleware/auth.middleware');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const argon2 = require('argon2');
 const { checkIPRegistrationLimit, getIPStats } = require('../utils/ipTracker');
 const { regenerateSession } = require('../middleware/security.middleware');
 const logger = require('../utils/logger');
 const csrf = require('csurf');
+
+// Frontend URL for email links (use environment variable in production)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // CSRF protection for state-changing auth operations - using cookie-based
 const csrfProtection = csrf({ 
@@ -111,7 +115,7 @@ router.post('/register', csrfProtection, authLimiter, [
         
         if (!checkIPRegistrationLimit(clientIP)) {
             const stats = getIPStats(clientIP);
-            console.log(`[REGISTRATION BLOCKED] IP: ${clientIP} exceeded daily limit`);
+            logger.warn('Registration blocked - IP exceeded daily limit', { ip: clientIP });
             return res.status(429).json({ 
                 message: `Too many accounts registered from this network. Please try again in ${stats.resetIn} minutes.`,
                 limitExceeded: true,
@@ -125,13 +129,12 @@ router.post('/register', csrfProtection, authLimiter, [
             return res.status(400).json({ message: 'Invalid CAPTCHA' });
         }
 
-        // System checks Database: SELECT * FROM users WHERE email = 'input_email'
-        console.log(`[REGISTRATION] Checking if email exists: ${email.toLowerCase()}`);
+        // System checks Database for existing email
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         
         // IF Email Exists: Stop! Do not send a verification email.
         if (existingUser) {
-            console.log(`[REGISTRATION] Email already exists in database: ${email}`);
+            logger.info('Registration attempt with existing email', { email: email.toLowerCase() });
             req.session.captcha = null; // Clear captcha
             // Popup Message: "This email is already registered. Please login instead."
             return res.status(400).json({ 
@@ -140,8 +143,6 @@ router.post('/register', csrfProtection, authLimiter, [
             });
         }
 
-        console.log(`[REGISTRATION] Email is new, creating user: ${email}`);
-        
         // IF Email DOES NOT Exist: Create the temporary user record
         const verification_token = crypto.randomBytes(32).toString('hex');
         const verification_token_expires = Date.now() + 10 * 60 * 1000; // 10 minutes
@@ -160,20 +161,17 @@ router.post('/register', csrfProtection, authLimiter, [
         }
 
         const newUser = await User.create(userData);
-        console.log(`[REGISTRATION] User created successfully: ${newUser.email}`);
-        console.log(`[IP TRACKING] Registration from IP: ${clientIP}`);
+        logger.info('New user registered', { email: newUser.email, ip: clientIP });
 
         req.session.captcha = null;
 
-        // Send the Gmail verification code (using your new SMTP settings)
-        const verifyLink = `http://localhost:5173/verify-email?token=${verification_token}`;
+        // Send the Gmail verification code (using environment variable for URL)
+        const verifyLink = `${FRONTEND_URL}/verify-email?token=${verification_token}`;
         await sendEmail(email, 'Verify your email', `
             <h3>Welcome to PizzaSlice!</h3>
             <p>Please click the link below to verify your email address (expires in 10 minutes):</p>
             <a href="${verifyLink}">Verify Email</a>
         `);
-
-        console.log(`[REGISTRATION] Verification email sent to: ${email}`);
         
         // Popup Message: "Registration successful! Please check your email for the 6-digit verification code."
         res.status(201).json({ message: 'Registration successful! Please check your email for verification.' });
@@ -255,7 +253,7 @@ router.post('/resend-verification', csrfProtection, authLimiter, [
         user.verification_token_expires = Date.now() + 10 * 60 * 1000; // 10 minutes
         await user.save();
 
-        const verifyLink = `http://localhost:5173/verify-email?token=${verification_token}`;
+        const verifyLink = `${FRONTEND_URL}/verify-email?token=${verification_token}`;
         await sendEmail(email, 'Verify your email', `
             <h3>Welcome to PizzaSlice!</h3>
             <p>Please click the link below to verify your email address (expires in 10 minutes):</p>
@@ -264,7 +262,7 @@ router.post('/resend-verification', csrfProtection, authLimiter, [
 
         res.status(200).json({ message: 'Verification email resent. Please check your inbox.' });
     } catch (error) {
-        console.error('Resend Verification Error:', error);
+        logger.error('Resend verification error', { error: error.message, email });
         res.status(500).json({ message: 'Server error while resending verification email' });
     }
 });
@@ -278,11 +276,11 @@ router.post('/login', csrfProtection, loginLimiter, [
     const { email, password, captcha } = req.body;
 
     try {
-        console.log(`[Login Attempt] Email: ${email}, Captcha Provided: ${captcha}, Session Captcha: ${req.session.captcha}`);
+        logger.info('Login attempt', { email, ip: req.ip });
 
         // IF captcha_is_wrong: SHOW "Invalid captcha. Please try again." REFRESH_CAPTCHA() STOP
         if (!req.session.captcha || req.session.captcha.toLowerCase() !== captcha.toLowerCase()) {
-            console.log('[Login Fail] Invalid CAPTCHA');
+            logger.warn('Login failed - invalid CAPTCHA', { email });
             req.session.captcha = null; // Clear captcha to force refresh
             return res.status(400).json({ message: 'Invalid captcha. Please try again.' });
         }
@@ -291,7 +289,7 @@ router.post('/login', csrfProtection, loginLimiter, [
         
         // IF email_or_password_is_wrong: SHOW "Invalid email or password." REFRESH_CAPTCHA() STOP
         if (!user) {
-            console.log('[Login Fail] User not found');
+            logger.warn('Login failed - user not found', { email });
             req.session.captcha = null; // Clear captcha to force refresh
             return res.status(401).json({ message: 'Invalid email or password.' });
         }
@@ -304,7 +302,7 @@ router.post('/login', csrfProtection, loginLimiter, [
         }
 
         if (!user.is_verified) {
-            console.log('[Login Fail] User not verified');
+            logger.warn('Login failed - user not verified', { email });
             req.session.captcha = null; // Clear captcha to force refresh
             return res.status(401).json({ message: 'Please verify your email first' });
         }
@@ -312,7 +310,7 @@ router.post('/login', csrfProtection, loginLimiter, [
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
-            console.log('[Login Fail] Password mismatch');
+            logger.warn('Login failed - password mismatch', { email });
             user.failed_login_attempts += 1;
             if (user.failed_login_attempts >= 5) {
                 user.lock_until = Date.now() + 15 * 60 * 1000;
@@ -327,7 +325,9 @@ router.post('/login', csrfProtection, loginLimiter, [
         user.lock_until = null;
 
         const otp = generateOTP();
-        user.mfa_secret = otp;
+        // Hash OTP before storing for security
+        const hashedOtp = await argon2.hash(otp, { type: argon2.argon2id });
+        user.mfa_secret = hashedOtp;
         user.mfa_secret_expires = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
         await user.save();
 
@@ -335,12 +335,11 @@ router.post('/login', csrfProtection, loginLimiter, [
         req.session.captcha = null;
 
         await sendEmail(user.email, 'Your Login OTP', `<p>Your verification code is: <strong>${otp}</strong></p>`);
-        // Logs removed for security
         req.session.preAuthUserId = user._id;
 
         res.status(200).json({ message: 'OTP sent to email', requireMfa: true });
     } catch (error) {
-        console.error('Login Error:', error);
+        logger.error('Login error', { error: error.message });
         res.status(500).json({ message: 'Login error' });
     }
 });
@@ -367,7 +366,16 @@ router.post('/verify-otp', csrfProtection, loginLimiter, regenerateSession, asyn
             });
         }
 
-        if (user.mfa_secret !== otp) {
+        // Verify hashed OTP using argon2
+        let isValidOtp = false;
+        try {
+            isValidOtp = await argon2.verify(user.mfa_secret, otp);
+        } catch (verifyError) {
+            // If verification fails (e.g., invalid hash format), treat as invalid
+            isValidOtp = false;
+        }
+
+        if (!isValidOtp) {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
@@ -396,7 +404,7 @@ router.post('/verify-otp', csrfProtection, loginLimiter, regenerateSession, asyn
         });
 
     } catch (error) {
-        console.error('OTP Verification Error:', error);
+        logger.error('OTP verification error', { error: error.message });
         res.status(500).json({ message: 'Verification error' });
     }
 });

@@ -3,13 +3,16 @@ const router = express.Router();
 const Order = require('../database/models/Order');
 const User = require('../database/models/User');
 const { isAuthenticated } = require('../middleware/auth.middleware');
+const { adminOnly, userOnly } = require('../middleware/admin.middleware');
 const { sendOrderConfirmation } = require('../utils/email');
 const { validateOrder } = require('../utils/priceValidation');
 const { checkPromoCodeAbuse } = require('../utils/fraudDetection');
 const logger = require('../utils/logger');
 
-// Create a new order
-router.post('/', isAuthenticated, async (req, res) => {
+// ==================== USER ROUTES (Customers Only) ====================
+
+// Create a new order (USER ONLY - Admins cannot place orders)
+router.post('/', userOnly, async (req, res) => {
     try {
         const {
             items,
@@ -183,8 +186,8 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 });
 
-// Get My Orders
-router.get('/mine', isAuthenticated, async (req, res) => {
+// Get My Orders (USER ONLY)
+router.get('/mine', userOnly, async (req, res) => {
     try {
         const orders = await Order.find({ customer: req.session.userId })
             .sort({ createdAt: -1 }); // Newest first
@@ -195,8 +198,8 @@ router.get('/mine', isAuthenticated, async (req, res) => {
     }
 });
 
-// Get Single Order Details
-router.get('/:id', isAuthenticated, async (req, res) => {
+// Get Single Order Details (USER ONLY - Own orders only)
+router.get('/:id', userOnly, async (req, res) => {
     try {
         const order = await Order.findOne({
             _id: req.params.id,
@@ -211,6 +214,275 @@ router.get('/:id', isAuthenticated, async (req, res) => {
     } catch (error) {
         console.error('Get Order Details Error:', error);
         res.status(500).json({ message: 'Failed to fetch order details' });
+    }
+});
+
+// ==================== ADMIN ROUTES (Admin Only) ====================
+const { requireAdmin } = require('../middleware/admin.middleware');
+
+// Get all orders (Admin only)
+router.get('/admin/all', adminOnly, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 20 } = req.query;
+        
+        const query = {};
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        const skip = (page - 1) * limit;
+
+        const orders = await Order.find(query)
+            .populate('customer', 'full_name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Order.countDocuments(query);
+
+        res.json({
+            orders,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        logger.error('Error fetching all orders', { error: error.message });
+        res.status(500).json({ message: 'Failed to fetch orders' });
+    }
+});
+
+// Get admin dashboard stats
+router.get('/admin/stats', adminOnly, async (req, res) => {
+    try {
+        const totalOrders = await Order.countDocuments();
+        const pendingOrders = await Order.countDocuments({ status: 'confirmed' });
+        const completedOrders = await Order.countDocuments({ status: 'delivered' });
+        
+        const revenueResult = await Order.aggregate([
+            { $match: { payment_status: 'paid' } },
+            { $group: { _id: null, total: { $sum: '$total' } } }
+        ]);
+        const totalRevenue = revenueResult[0]?.total || 0;
+
+        const totalCustomers = await User.countDocuments({ role: 'customer' });
+
+        const recentOrders = await Order.find()
+            .populate('customer', 'full_name email')
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.json({
+            stats: {
+                totalOrders,
+                pendingOrders,
+                completedOrders,
+                totalRevenue,
+                totalCustomers
+            },
+            recentOrders
+        });
+    } catch (error) {
+        logger.error('Error fetching admin stats', { error: error.message });
+        res.status(500).json({ message: 'Failed to fetch statistics' });
+    }
+});
+
+// Update order status (Admin only)
+router.patch('/:id/status', adminOnly, async (req, res) => {
+    try {
+        const { status, note } = req.body;
+
+        if (!['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const order = await Order.findById(req.params.id);
+        
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        order.status = status;
+        order.status_history.push({
+            status,
+            timestamp: new Date(),
+            note: note || `Status updated to ${status}`
+        });
+
+        await order.save();
+
+        logger.logAdminAction('order_status_updated', req.session.userId, order._id, {
+            orderNumber: order.order_number,
+            newStatus: status
+        });
+
+        res.json({
+            message: 'Order status updated successfully',
+            order
+        });
+    } catch (error) {
+        logger.error('Error updating order status', { error: error.message });
+        res.status(500).json({ message: 'Failed to update order status' });
+    }
+});
+
+// Get single order details (Admin)
+router.get('/admin/:id', adminOnly, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id)
+            .populate('customer', 'full_name email phone');
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.json({ order });
+    } catch (error) {
+        logger.error('Error fetching order details', { error: error.message });
+        res.status(500).json({ message: 'Failed to fetch order details' });
+    }
+});
+
+// Delete order (Admin only) - Use with caution
+router.delete('/admin/:id', adminOnly, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Log deletion for audit trail
+        logger.security('Order deleted by admin', {
+            adminId: req.session.userId,
+            orderId: order._id,
+            orderNumber: order.order_number,
+            customerId: order.customer,
+            total: order.total,
+            status: order.status
+        });
+
+        await Order.findByIdAndDelete(req.params.id);
+
+        res.json({ 
+            message: 'Order deleted successfully',
+            deletedOrder: {
+                id: order._id,
+                order_number: order.order_number
+            }
+        });
+    } catch (error) {
+        logger.error('Error deleting order', { error: error.message, orderId: req.params.id });
+        res.status(500).json({ message: 'Failed to delete order' });
+    }
+});
+
+// Create order manually (Admin only) - Optional feature for phone orders
+router.post('/admin/create', adminOnly, async (req, res) => {
+    try {
+        const {
+            customerId,
+            items,
+            subtotal,
+            deliveryFee,
+            total,
+            deliveryType,
+            deliveryInfo,
+            paymentMethod = 'cash',
+            payment_status = 'pending',
+            status = 'confirmed',
+            note
+        } = req.body;
+
+        // Validate required fields
+        if (!customerId || !items || items.length === 0 || !total) {
+            return res.status(400).json({ message: 'Missing required fields: customerId, items, and total are required' });
+        }
+
+        // Verify customer exists
+        const customer = await User.findById(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: 'Customer not found' });
+        }
+
+        // Validate product IDs
+        const mongoose = require('mongoose');
+        for (const item of items) {
+            const pid = item._id || item.id;
+            if (!mongoose.Types.ObjectId.isValid(pid)) {
+                return res.status(400).json({ message: `Invalid product ID: ${pid}` });
+            }
+        }
+
+        // Server-side price validation
+        const priceValidation = await validateOrder({
+            items,
+            subtotal,
+            deliveryFee,
+            total,
+            deliveryType,
+            deliveryInfo
+        });
+
+        if (!priceValidation.isValid) {
+            logger.security('Admin order creation validation failed', {
+                adminId: req.session.userId,
+                customerId,
+                errors: priceValidation.errors
+            });
+            return res.status(400).json({
+                message: 'Order validation failed',
+                errors: priceValidation.errors
+            });
+        }
+
+        // Generate order number
+        const orderCount = await Order.countDocuments();
+        const order_number = `ORD${Date.now()}${orderCount + 1}`;
+
+        // Create order
+        const order = await Order.create({
+            order_number,
+            customer: customerId,
+            items,
+            subtotal,
+            delivery_fee: deliveryFee,
+            total,
+            delivery_type: deliveryType,
+            delivery_address: deliveryInfo?.address || '',
+            contact_number: deliveryInfo?.contact1 || customer.phone || '',
+            status,
+            payment_status,
+            payment_method: paymentMethod,
+            status_history: [{
+                status,
+                timestamp: new Date(),
+                note: note || `Order created manually by admin`
+            }]
+        });
+
+        logger.info('Order created manually by admin', {
+            adminId: req.session.userId,
+            orderId: order._id,
+            orderNumber: order.order_number,
+            customerId,
+            total
+        });
+
+        // Populate customer details for response
+        await order.populate('customer', 'full_name email');
+
+        res.status(201).json({
+            message: 'Order created successfully',
+            order
+        });
+    } catch (error) {
+        logger.error('Error creating admin order', { error: error.message, adminId: req.session.userId });
+        res.status(500).json({ message: 'Failed to create order' });
     }
 });
 

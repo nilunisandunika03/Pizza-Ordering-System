@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
 const { isAuthenticated } = require('../middleware/auth.middleware');
+const { userOnly } = require('../middleware/admin.middleware');
 const { strictRateLimiter } = require('../middleware/security.middleware');
 const {
     generateTransactionId,
@@ -16,8 +17,9 @@ const User = require('../database/models/User');
 /**
  * Enhanced Payment Processing with Fraud Detection
  * Implements multiple layers of security for payment transactions
+ * USER ONLY - Admins cannot make payments
  */
-router.post('/process', isAuthenticated, strictRateLimiter, async (req, res) => {
+router.post('/process', userOnly, strictRateLimiter, async (req, res) => {
     try {
         const { amount, paymentMethod, cardLast4, orderTotal, orderData } = req.body;
         const userId = req.session.userId;

@@ -65,6 +65,23 @@ const userSchema = new mongoose.Schema({
         enum: ['customer', 'admin'],
         default: 'customer'
     },
+    is_blocked: {
+        type: Boolean,
+        default: false
+    },
+    blocked_reason: {
+        type: String,
+        default: null
+    },
+    blocked_at: {
+        type: Date,
+        default: null
+    },
+    blocked_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
     savedCards: [{
         last4: String,
         brand: String, // e.g., 'Visa', 'MasterCard'

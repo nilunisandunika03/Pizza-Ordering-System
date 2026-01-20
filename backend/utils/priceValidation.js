@@ -102,8 +102,8 @@ const validateOrderTotal = (subtotal, deliveryFee, total, deliveryType) => {
     const clientTotal = parseFloat(total);
     const tolerance = 0.01;
 
-    // Validate delivery fee based on delivery type
-    const expectedDeliveryFee = deliveryType === 'delivery' ? 5.00 : 0.00;
+    // Validate delivery fee based on delivery type (Rs. 300 for delivery in Sri Lanka)
+    const expectedDeliveryFee = deliveryType === 'delivery' ? 300.00 : 0.00;
     if (Math.abs(deliveryFee - expectedDeliveryFee) > tolerance) {
         console.log('[SECURITY] Delivery fee tampering detected');
         return {
