@@ -69,8 +69,8 @@ const validateCartPrices = async (cartItems) => {
                 });
                 
                 console.log(`[SECURITY] Price tampering detected: ${item.name}`);
-                console.log(`  Client Price: $${clientPrice}`);
-                console.log(`  Actual Price: $${actualPrice}`);
+                console.log(`  Client Price: Rs. ${clientPrice}`);
+                console.log(`  Actual Price: Rs. ${actualPrice}`);
                 
                 // Use actual price for calculation
                 validatedTotal += actualPrice * item.quantity;
@@ -153,7 +153,7 @@ const validatePromoCode = async (promoCode, subtotal, userId) => {
     if (subtotal < promo.minOrder) {
         return {
             isValid: false,
-            error: `Minimum order of $${promo.minOrder} required for this promo code`
+            error: `Minimum order of Rs. ${promo.minOrder} required for this promo code`
         };
     }
 
