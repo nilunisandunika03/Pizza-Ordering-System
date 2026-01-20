@@ -22,26 +22,43 @@ const Header = () => {
                     <NavLink to="/" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                         Home
                     </NavLink>
-                    <NavLink to="/menu" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                        Menu
-                    </NavLink>
+                    
+                    {/* Menu link only for non-admin users */}
+                    {(!user || user.role !== 'admin') && (
+                        <NavLink to="/menu" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                            Menu
+                        </NavLink>
+                    )}
+                    
                     <NavLink to="/about" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                         About
                     </NavLink>
                     <NavLink to="/contact" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                         Contact
                     </NavLink>
+                    
+                    {/* Admin link only for admin users */}
+                    {user && user.role === 'admin' && (
+                        <NavLink to="/admin" className={({ isActive }) => isActive ? 'nav-link active admin-link' : 'nav-link admin-link'}>
+                            Admin Panel
+                        </NavLink>
+                    )}
                 </nav>
 
                 <div className="header-actions">
-                    <Link to="/cart" className="cart-btn" aria-label="Cart">
-                        <ShoppingCart size={24} weight="bold" />
-                        <span className="cart-count">{cartCount}</span>
-                    </Link>
+                    {/* Cart and Orders - Only for non-admin users */}
+                    {(!user || user.role !== 'admin') && (
+                        <>
+                            <Link to="/cart" className="cart-btn" aria-label="Cart">
+                                <ShoppingCart size={24} weight="bold" />
+                                <span className="cart-count">{cartCount}</span>
+                            </Link>
 
-                    <Link to="/orders" className="orders-btn" title="My Orders">
-                        <Clock size={24} weight="bold" />
-                    </Link>
+                            <Link to="/orders" className="orders-btn" title="My Orders">
+                                <Clock size={24} weight="bold" />
+                            </Link>
+                        </>
+                    )}
 
                     {user ? (
                         <div className="user-actions">

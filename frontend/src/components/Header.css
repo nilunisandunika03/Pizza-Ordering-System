@@ -42,12 +42,30 @@
 }
 
 .orders-btn,
-.profile-btn {
+.profile-btn,
+.admin-icon-btn {
     transition: transform 0.2s;
     color: var(--text-main);
 }
 
+.admin-icon-btn {
+    color: #ff6b35;
+}
+
 .orders-btn:hover,
+.profile-btn:hover,
+.admin-icon-btn:hover {
+    transform: scale(1.1);
+}
+
+.admin-link {
+    color: #ff6b35 !important;
+    font-weight: 600;
+}
+
+.admin-link:hover {
+    color: #e55a2b !important;
+}
 .profile-btn:hover {
     transform: scale(1.1);
     color: var(--primary);
