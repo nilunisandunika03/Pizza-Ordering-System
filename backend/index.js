@@ -41,6 +41,17 @@ if (process.env.NODE_ENV === 'production') {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// HTTPS enforcement in production (redirect HTTP to HTTPS)
+if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+        // Check for X-Forwarded-Proto header (set by reverse proxies like Nginx, Cloudflare)
+        if (req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect(301, `https://${req.headers.host}${req.url}`);
+        }
+        next();
+    });
+}
+
 // CORS must come first to handle preflight requests
 app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -371,6 +382,7 @@ const categoryRoutes = require('./routes/category.routes');
 const cartRoutes = require('./routes/cart.routes');
 const orderRoutes = require('./routes/order.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 // Routes (CSRF protection applied to state-changing operations)
 app.use('/api/auth', authRoutes); // CSRF added per route in auth.routes.js
@@ -379,6 +391,7 @@ app.use('/api/categories', categoryRoutes); // Read-only, no CSRF needed
 app.use('/api/cart', csrfProtection, cartRoutes); // CSRF protected
 app.use('/api/orders', csrfProtection, orderRoutes); // CSRF protected
 app.use('/api/payments', csrfProtection, paymentRoutes); // CSRF protected
+app.use('/api/admin', csrfProtection, adminRoutes); // CSRF protected - Admin operations
 
 const startServer = async () => {
     try {
